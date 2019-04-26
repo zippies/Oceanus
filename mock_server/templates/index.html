@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MockServer</title>
+    <link rel="shortcut icon" href="/static/imgs/favicon.ico">
+    <link rel="stylesheet" href="/static/bower_components/bootstrap/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="/static/bower_components/bootstrap-table/dist/bootstrap-table.css">
+    <link rel="stylesheet" href="/static/bower_components/bootstrap/dist/css/bootstrap-theme.css">
+    <link rel="stylesheet" href="/static/bower_components/codemirror/lib/codemirror.css">
+    <style>
+        body {
+            background-color: #FFFFF0
+        }
+
+        * {
+            border: 0px solid transparent !important;
+        }
+    </style>
+</head>
+<body>
+{# 模态框-addMock start #}
+<div class="modal fade addMockModel" tabindex="-1" role="dialog" aria-labelledby="largemodal">
+    <div class="modal-dialog modal-lg" role="document" style="">
+
+        <div class="modal-content" style="background-color: #F0F8FF;border-radius:10px;padding:10px">
+            <form id="addmock-form">
+                <div class="modal-body">
+                    <ul class="list-inline">
+                        <li><label>如果以</label></li>
+                        <li>
+                            <div class="btn-group">
+                                <input class="btn btn-warning btn-sm dropdown-toggle" name="method" id="method"
+                                       value="{{ method_list[0] }}" data-toggle="dropdown" aria-haspopup="true"
+                                       aria-expanded="false" style="width:70px" readonly>
+                                <ul class="dropdown-menu">
+                                    {% for method in method_list %}
+                                        <li><a href="javascript:$('#method').val('{{ method }}');">{{ method }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                        <li><label>方式调用接口</label></li>
+                        <li>
+                            <input type="text" name="urlpath" placeholder="/path/to/your/api" value="/hello/world"
+                                   class="form-control" required>
+                        </li>
+                        <li><label>并且</label></li>
+                        <li>
+                            <div class="btn-group">
+                                <input class="btn btn-warning btn-sm dropdown-toggle" name="condition" id="condition"
+                                       value="{{ condition_list[0] }}" data-toggle="dropdown" aria-haspopup="true"
+                                       aria-expanded="false" style="width:60px" readonly>
+                                <ul class="dropdown-menu">
+                                    {% for condition in condition_list %}
+                                        <li>
+                                            <a href="javascript:$('#condition').val('{{ condition }}');">{{ condition }}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="btn-group">
+                                <input class="btn btn-warning btn-sm dropdown-toggle" name="operation" id="operation"
+                                       value="{{ operation_list[0] }}" data-toggle="dropdown" aria-haspopup="true"
+                                       aria-expanded="false" style="width:80px" readonly>
+                                <ul class="dropdown-menu">
+                                    {% for operation in operation_list %}
+                                        <li>
+                                            <a href="javascript:$('#operation').val('{{ operation }}');if('{{ operation }}' == 'in'){$('#value').attr('placeholder', '多个值以逗号分隔')}else{$('#value').attr('placeholder', '')}">{{ operation }}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                        <li>
+                            <input type="text" name="value" id="value" class="form-control">
+                        </li>
+                        <li>
+                            <label style="margin-top:10px">则返回HttpCode为</label>
+                            <div class="btn-group">
+                                <input class="btn btn-warning btn-sm dropdown-toggle" name="httpcode" id="httpcode"
+                                       value="{{ httpcode_list[0] }}" data-toggle="dropdown" aria-haspopup="true"
+                                       aria-expanded="false" style="width:50px" readonly>
+                                <ul class="dropdown-menu">
+                                    {% for httpcode in httpcode_list %}
+                                        <li>
+                                            <a href="javascript:$('#httpcode').val('{{ httpcode }}');">{{ httpcode }}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                        <li>
+                            <label style="margin-top:10px">类型为</label>
+                            <div class="btn-group">
+                                <input class="btn btn-warning btn-sm dropdown-toggle" name="resp_type" id="resp_type"
+                                       value="{{ resp_type_list[0] }}" data-toggle="dropdown" aria-haspopup="true"
+                                       aria-expanded="false" style="width:135px" readonly>
+                                <ul class="dropdown-menu">
+                                    {% for resp_type in resp_type_list %}
+                                        <li>
+                                            <a href="javascript:$('#resp_type').val('{{ resp_type }}');">{{ resp_type }}</a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                        <li><label>的结果</label></li>
+                    </ul>
+                    <textarea name="resp_body" id="resp_body" cols="10" rows="5" class="form-control"
+                              style="margin-top:10px"
+                              required>{"hello":"world"}</textarea>
+                    <label style="margin-top:5px">否则返回</label>
+                    <textarea name="resp_default" id="resp_default" cols="10" rows="5" class="form-control"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取 消</button>
+                    <button type="button" class="btn btn-warning" id="addmock-btn" data-dismiss="modal">添 加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{# 模态框-addMock end #}
+
+
+{# 模态框-seeConditions start #}
+<div class="modal fade seeConditionModel" tabindex="-1" role="dialog" aria-labelledby="largemodal">
+    <div class="modal-dialog modal-lg" role="document" style="">
+
+        <div class="modal-content" style="background-color: #F0F8FF;border-radius:10px;padding:10px">
+            <div class="modal-body" id="condition-table-div">
+            </div>
+        </div>
+    </div>
+</div>
+{# 模态框-seeConditions end #}
+
+<div class="container">
+    <div class="page-header">
+        <h1>Mock Server
+            <small>easy your test</small>
+        </h1>
+    </div>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".addMockModel"
+            style="float:left;margin-top:10px">添加Mock
+    </button>
+    <table id="mock-table"></table>
+</div>
+
+</body>
+<script src="/static/bower_components/jquery/dist/jquery.js"></script>
+<script src="/static/bower_components/bootstrap/dist/js/bootstrap.js"></script>
+<script src="/static/bower_components/bootstrap-table/dist/bootstrap-table.js"></script>
+<script src="/static/bower_components/layer/src/layer.js"></script>
+<script src="/static/bower_components/codemirror/lib/codemirror.js"></script>
+<script>
+    $(function () {
+
+        $("#addmock-btn").click(function () {
+            $.ajax({
+                url: "/addmock",
+                type: "post",
+                data: $("#addmock-form").serialize(),
+                success: function (data) {
+                    if (data.code == 0) {
+                        layer.msg("添加成功", {time: 800});
+                        $("#mock-table").bootstrapTable("refresh");
+                    } else {
+                        layer.msg("添加失败:" + data.error, {time: 1500})
+                    }
+                }
+            })
+        });
+
+        $("#mock-table").bootstrapTable({
+            url: '/mock/all',
+            search: true,
+            pagination: true,
+            striped: true,
+            sortable: true,
+            pageNumber: 1,
+            pageSize: 20,
+            pageList: [20, 50, 100],
+            columns: [
+                {
+                    field: 'id',
+                    title: 'ID',
+                    valign: "middle"
+                }, {
+                    field: 'method',
+                    title: '调用方法',
+                    valign: "middle",
+                    formatter: function (value) {
+                        return '<span class="label label-success">' + value + '</span>'
+                    }
+                }, {
+                    field: 'path',
+                    title: '接口路径',
+                    valign: "middle"
+                }, {
+                    field: 'resp_type',
+                    title: '返回值类型',
+                    valign: "middle"
+                }, {
+                    field: 'resp_default',
+                    title: '默认返回',
+                    valign: "middle",
+                    formatter: function (value, api, index) {
+                        return '<pre id="pre-body-' + api.id + '" ondblclick="editmock(' + api.id + ')" style="width:300px">' + value + '</pre><textarea id="input-body-' + api.id + '" style="display:none;width:300px" class="form-control" onblur="savemock(' + api.id + ')">' + value + '</textarea>'
+                    }
+                }, {
+                    field: 'httpcode',
+                    title: '返回码',
+                    valign: "middle",
+                    align: "center",
+                    formatter: function (value, api, index) {
+                        return '<pre id="pre-httpcode-' + api.id + '" ondblclick="edithttpcode(' + api.id + ')" style="width:50px">' + value + '</pre><input id="input-httpcode-' + api.id + '" value=\'' + value + '\' style="display:none;width:50px" class="form-control" onblur="savemockhttpcode(' + api.id + ')">'
+                    }
+                }, {
+                    field: 'create_user',
+                    title: '创建人',
+                    valign: "middle"
+                }, {
+                    field: 'conditions',
+                    title: '条件配置',
+                    valign: "middle",
+                    formatter: function (value, api, index) {
+                        $("#condition-table").bootstrapTable("refresh");
+                        return '<button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target=".seeConditionModel" onclick="seeConditions(' + api.id + ')">查看</button>'
+                    }
+                },
+                {
+                    field: 'operation',
+                    title: '操作',
+                    valign: "middle",
+                    formatter: function (value, api, index) {
+                        return '<button class="btn btn-danger btn-sm delete" id="mock-' + api.id + '" onclick="deleteMock(' + api.id + ')">删除</button>'
+                    }
+                }
+            ]
+        });
+    });
+
+    function seeConditions(apiid) {
+        $("#condition-table-div").html("<table id=\"condition-table\"></table>");
+        $("#condition-table").bootstrapTable({
+            url: '/mock/' + apiid + '/conditions',
+            search: true,
+            cache: false,
+            striped: true,
+            sortable: true,
+            columns: [
+                {
+                    field: 'id',
+                    title: 'ID',
+                    valign: "middle"
+
+                }, {
+                    field: 'condition',
+                    title: '当',
+                    valign: "middle"
+                }, {
+                    field: 'operation',
+                    title: '操作符',
+                    valign: "middle"
+                }, {
+                    field: 'value',
+                    title: '值',
+                    valign: "middle",
+                    formatter: function(value, condition, index){
+                        return '<pre id="condition-pre-value-' + condition.id + '" ondblclick="editconditionvalue(' + condition.id + ')" style="width:100px">' + value + '</pre><input id="condition-input-value-' + condition.id + '" value=\'' + value + '\' style="display:none;width:100px" class="form-control" onblur="saveconditionvalue(' + condition.id + ')">'
+                    }
+                }, {
+                    field: 'resp_body',
+                    title: '返回值',
+                    valign: "middle",
+                    formatter: function (value, condition, index) {
+                        return '<pre id="condition-pre-body-' + condition.id + '" ondblclick="editcondition(' + condition.id + ')" style="width:300px">' + value + '</pre><textarea id="condition-input-body-' + condition.id + '" value=\'' + value + '\' style="display:none;width:300px" class="form-control" onblur="savecondition(' + condition.id + ')">' + value + '</textarea>'
+                    }
+                }, {
+                    field: 'httpcode',
+                    title: '返回码',
+                    valign: "middle",
+                    align: "center",
+                    formatter: function (value, condition, index) {
+                        return '<pre id="condition-pre-httpcode-' + condition.id + '" ondblclick="editconditionhttpcode(' + condition.id + ')" style="width:50px">' + value + '</pre><input id="condition-input-httpcode-' + condition.id + '" value=\'' + value + '\' style="display:none;width:50px" class="form-control" onblur="saveconditionhttpcode(' + condition.id + ')">'
+                    }
+                }, {
+                    field: 'create_user',
+                    title: '创建人',
+                    valign: "middle"
+                }, {
+                    field: 'operation',
+                    title: '操作',
+                    valign: "middle",
+                    formatter: function (value, condition, index) {
+                        return "<button class='btn btn-danger btn-sm' id='condition-" + condition.id + "' onclick='deleteCondition(" + condition.id + ")'>删除</button>"
+                    }
+                }
+            ]
+        })
+    }
+
+
+    function deleteMock(id) {
+        layer.confirm(
+            '确定删除Mock吗？',
+            {btn: ['确 定', '取 消']},
+            function () {
+                $.ajax({
+                    url: "/mock/delete/" + id,
+                    type: "delete",
+                    success: function (data) {
+                        if (data.code == 0) {
+                            layer.msg("删除成功.", {time: 800});
+                            $("#mock-table").bootstrapTable("refresh");
+                        } else {
+                            layer.msg("删除失败:" + data.error, {time: 1500})
+                        }
+                    }
+                })
+            },
+            function () {
+                console.log("取消删除:" + id)
+            }
+        );
+    }
+
+
+    function deleteCondition(id) {
+        layer.confirm(
+            '确定删除配置吗？',
+            {btn: ['确 定', '取 消']},
+            function () {
+                $.ajax({
+                    url: "/condition/delete/" + id,
+                    type: "delete",
+                    success: function (data) {
+                        if (data.code == 0) {
+                            layer.msg("删除成功.");
+                            $("#condition-table").bootstrapTable("refresh");
+                        } else {
+                            layer.msg("删除失败:" + data.error, {time: 1500})
+                        }
+                    }
+                })
+            },
+            function () {
+                console.log("取消删除:" + id)
+            }
+        );
+    }
+
+    function editmock(api_id) {
+        $("#pre-body-" + api_id).toggle();
+        $("#input-body-" + api_id).toggle().focus();
+    }
+
+    function editcondition(condition_id) {
+        $("#condition-pre-body-" + condition_id).toggle();
+        $("#condition-input-body-" + condition_id).toggle().focus();
+    }
+
+    function edithttpcode(api_id) {
+        $("#pre-httpcode-" + api_id).toggle();
+        $("#input-httpcode-" + api_id).toggle().focus();
+    }
+
+    function editconditionhttpcode(condition_id) {
+        $("#condition-pre-httpcode-" + condition_id).toggle();
+        $("#condition-input-httpcode-" + condition_id).toggle().focus();
+    }
+
+    function editconditionvalue(condition_id) {
+        $("#condition-pre-value-" + condition_id).toggle();
+        $("#condition-input-value-" + condition_id).toggle().focus();
+    }
+
+
+    function savemock(api_id) {
+        if ($("#pre-body-" + api_id).html() != $("#input-body-" + api_id).val()) {
+            $.ajax({
+                url: "/mock/edit/" + api_id,
+                type: "put",
+                data: {"body": $("#input-body-" + api_id).val()},
+                success: function (data) {
+                    if (data.code == 0) {
+                        $("#pre-body-" + api_id).html($("#input-body-" + api_id).val());
+                        layer.msg("修改成功", {time: 800})
+                    } else {
+                        layer.msg("修改失败:" + data.error, {time: 1500});
+                        $("#input-body-" + api_id).val($("#pre-body-" + api_id).html())
+                    }
+                }
+            });
+        }
+        editmock(api_id)
+    }
+
+    function savecondition(condition_id) {
+        if ($("#condition-pre-body-" + condition_id).html() != $("#condition-input-body-" + condition_id).val()) {
+            $.ajax({
+                url: "/condition/edit/" + condition_id,
+                type: "put",
+                data: {"body": $("#condition-input-body-" + condition_id).val()},
+                success: function (data) {
+                    if (data.code == 0) {
+                        $("#condition-pre-body-" + condition_id).html($("#condition-input-body-" + condition_id).val());
+                        layer.msg("修改成功", {time: 800})
+                    } else {
+                        layer.msg("修改失败:" + data.error, {time: 1500});
+                        $("#condition-input-body-" + condition_id).val($("#condition-pre-body-" + condition_id).html())
+                    }
+                }
+            });
+        }
+        editcondition(condition_id)
+    }
+
+    function savemockhttpcode(api_id) {
+        if ($("#pre-httpcode-" + api_id).html() != $("#input-httpcode-" + api_id).val()) {
+            $.ajax({
+                url: "/mock/edit/" + api_id,
+                type: "put",
+                data: {"httpcode": $("#input-httpcode-" + api_id).val()},
+                success: function (data) {
+                    if (data.code == 0) {
+                        $("#pre-httpcode-" + api_id).html($("#input-httpcode-" + api_id).val());
+                        layer.msg("修改成功", {time: 800})
+                    } else {
+                        layer.msg("修改失败:" + data.error, {time: 1500});
+                        $("#input-httpcode-" + api_id).val($("#pre-httpcode-" + api_id).html())
+                    }
+                }
+            });
+        }
+        edithttpcode(api_id)
+    }
+
+    function saveconditionhttpcode(condition_id) {
+        if ($("#condition-pre-httpcode-" + condition_id).html() != $("#condition-input-httpcode-" + condition_id).val()) {
+            $.ajax({
+                url: "/condition/edit/" + condition_id,
+                type: "put",
+                data: {"httpcode": $("#condition-input-httpcode-" + condition_id).val()},
+                success: function (data) {
+                    if (data.code == 0) {
+                        $("#condition-pre-httpcode-" + condition_id).html($("#condition-input-httpcode-" + condition_id).val());
+                        layer.msg("修改成功", {time: 800})
+                    } else {
+                        layer.msg("修改失败:" + data.error, {time: 1500});
+                        $("#condition-input-httpcode-" + condition_id).val($("#condition-pre-httpcode-" + condition_id).html())
+                    }
+                }
+            });
+        }
+        editconditionhttpcode(condition_id)
+    }
+
+    function saveconditionvalue(condition_id) {
+        if ($("#condition-pre-value-" + condition_id).html() != $("#condition-input-value-" + condition_id).val()) {
+            $.ajax({
+                url: "/condition/edit/" + condition_id,
+                type: "put",
+                data: {"value": $("#condition-input-value-" + condition_id).val()},
+                success: function (data) {
+                    if (data.code == 0) {
+                        $("#condition-pre-value-" + condition_id).html($("#condition-input-value-" + condition_id).val());
+                        layer.msg("修改成功", {time: 800})
+                    } else {
+                        layer.msg("修改失败:" + data.error, {time: 1500});
+                        $("#condition-input-value-" + condition_id).val($("#condition-pre-value-" + condition_id).html())
+                    }
+                }
+            });
+        }
+        editconditionvalue(condition_id)
+    }
+</script>
+</html>
